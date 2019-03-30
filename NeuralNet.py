@@ -2,21 +2,65 @@ import numpy as np
 import math as m
 import random as r
 
+def sigmoid(z):
+    #For some reason thus vectorize thing doesn't always work
+    # sig = lambda x: 1/(1 + m.e**(-x))
+    # vec_sig = np.vectorize(sig)
+    # return vec_sig(z)
+
+    for i in range(len(z)):
+        z[i][0] = 1/(1 + m.e**(-z[i][0]))
+    return z
+
+def ReLU(z):
+    return np.where(z > 0, z, 0)
+
+def soft_max(z):
+    exp_sum = 0
+    for elem in z[0]:
+        exp_sum += m.e**(elem)
+
+    a = np.zeros(z.shape)
+    for i in range(len(z[0])):
+        a[0][i] = float(m.e**(z[0][i])/exp_sum)
+    return a
+
 class NeuralNetwork:
 
-    def __init__(self, init_weights):
-        self.weight_mult = 2
-        self.layer_num = 1
-        self.hidden_num = 20
-        self.output_num = 10
-        self.input_num = 10
-        self.layer_funcs = [self.sigmoid, self.sigmoid]
+    def __init__(self, init_weights, settings):
+        self.weight_mult = settings["weight_mult"]
+        self.layer_num = settings["layer_num"]
+        self.hidden_num = settings["hidden_num"]
+        self.output_num = settings["output_num"]
+        self.input_num = settings["input_num"]
+        self.layer_funcs = settings["layer_funcs"]
 
         self.score = 0.0
         if (init_weights):
             self.init_network()
         else:
             self.W = []
+
+        #All of the next stuff is for reinforcement learning
+        self.discount_rate = 0.95
+
+        #The rewards at any given time
+        self.rewards = []
+
+        #All of the states at a given time (ie the specific inputs)
+        self.memory = []
+
+        #The outputs at various timesteps
+        self.output_values = []
+
+        #The choice that the network made at a given timestep
+        self.out_choice = []
+
+        #The amount of frames before you use backpropagation
+        self.memory_length = 100
+
+        #The amount of memories to sample for backpropagation
+        self.sample_count = 50
 
     def init_network(self):
         #Initializes the weights to random values between [0,weight_mult]
@@ -27,28 +71,49 @@ class NeuralNetwork:
 
     def calculate_outputs(self, inputs):
         a = inputs
+        z = None
         for i in range(self.layer_num+1):
-            z = np.dot(a.T, self.W[i])
+            z = np.dot(a.T, self.W[i]).T
             a = self.layer_funcs[i](z)
-        return a
+        return self.layer_funcs[self.layer_num](z)
 
-    def sigmoid(self, z):
-        sig = lambda x: 1/(1 + m.e**(-x))
-        vec_sig = np.vectorize(sig)
-        return sig(z).T
+    def calculate_rl_outputs(self, reward, inputs):
+        a = inputs
+        z = None
+        for i in range(self.layer_num+1):
+            z = np.dot(a.T, self.W[i]).T
+            a = self.layer_funcs[i](z)
 
-    def ReLU(self, z):
-        return np.where(z > 0, z, 0)
+        #Now you have to store the inputs, the reward, and the output
+        self.memory.append(inputs)
+        self.rewards.append(reward)
+        self.outputs.append(self.layer_funcs[self.layer_num](z))
 
-    def soft_max(self, z):
-        exp_sum = 0
-        for elem in z[0]:
-            exp_sum += m.e**(elem)
+        #Check if we should now put the gradient
+        if (len(self.memory) == 2*self.memory_length):
+            for _ in range(self.sample_count):
+                i = r.randint(0,self.memory_length)
 
-        a = np.zeros(z.shape)
-        for i in range(len(z[0])):
-            a[0][i] = float(m.e**(z[0][i])/exp_sum)
-        return a
+                #Select the rewards and inputs for backpropagation
+                in = self.memory[i]
+                reward = 0
+                for u in range(i, i + self.memory_length):
+                    reward += self.rewards[u]*self.discount_rate**(u-i)
+
+                #Now calculate the gradients and adjust the weights
+                for u in range(len(self.out_choice[i])):
+                    out_index = self.out_choice[i][u]
+                    expected_reward = self.outputs[out_index][0]
+                    calc_rl_gradient(reward, expected_reward, in)
+
+        return self.layer_funcs[self.layer_num](z)
+
+    #UMMMM too lazy to calculate these right now
+    def calc_rl_gradient(actual, guess, inputs):
+        error = 2 * (actual - guess)
+        for i in range(len(self.W)):
+            for u in range(i, len(self.W)):
+
 
 mutation_percent = 0.1
 
