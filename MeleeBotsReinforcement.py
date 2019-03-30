@@ -183,20 +183,17 @@ while True:
             #If there percent goes down it means they die
             if (p1.action == enums.Action.ON_HALO_DESCENT):
                 p_lost = 1
-                rewards1[-1] = (-50)
+                n1.add_reward(-50)
                 print('Blehh1')
                 controller1.simple_press(0.5, 0.5, None)
                 controller2.simple_press(0.5, 0.5, None)
             elif (p2.action == enums.Action.ON_HALO_DESCENT):
                 p_lost = 2
-                rewards2[-1] = (-50)
+                n2.add_reward(-50)
                 print('Blehh')
                 controller1.simple_press(0.5, 0.5, None)
                 controller2.simple_press(0.5, 0.5, None)
             else:
-                rewards1.append(0)
-                rewards2.append(0)
-
                 n1_inputs = np.zeros((settings["input_num"], 1))
                 n1_inputs[0][0] = p1.x/max_x
                 n1_inputs[1][0] = p1.y/max_y
@@ -248,25 +245,10 @@ while True:
                 n2_inputs[22][0] = p1.percent / 150.0
 
                 #Calculate the outputs
-                n1_outputs = n1.model(torch.from_numpy(n1_inputs.T).float())
-                n2_outputs = n2.model(torch.from_numpy(n2_inputs.T).float())
-
-                max1 = max(n1_outputs)
-                max2 = max(n2_outputs)
-
-                control1 = np.where(n1_outputs == max1)[0][0]
-                control2 = np.where(n2_outputs == max2)[0][0]
-
-                r1 = r.random()
-                r2 = r.random()
-                if (r1 < random_chance): control1 = r.randint(0,44)
-                if (r2 < random_chance): control2 = r.randint(0,44)
-
-                choices1.append(control1)
-                choices2.append(control2)
-
-                n1.inputs.append(torch.from_numpy(n1_inputs.T).float())
-                n2.inputs.append(torch.from_numpy(n2_inputs.T).float())
+                n1_outputs = n1.forward_pass(torch.from_numpy(n1_inputs.T).float())
+                n2_outputs = n2.forward_pass(torch.from_numpy(n2_inputs.T).float())
+                control1 = n1_outputs[0]
+                control2 = n2_outputs[0]
 
                 #Tilt the controller
                 if (control1 % 5 == 0):
@@ -352,13 +334,8 @@ while True:
 
                 current_count += 1
                 if (current_count == 2*n1.batch_size):
-                    n1.back_pass(rewards1, choices1)
-                    n2.back_pass(rewards2, choices2)
-
-                    rewards1 = rewards1[int(len(rewards1)/2):]
-                    rewards2 = rewards2[int(len(rewards2)/2):]
-                    choices1 = choices1[int(len(choices1)/2):]
-                    choices2 = choices2[int(len(choices2)/2):]
+                    n1.back_pass()
+                    n2.back_pass()
                     current_count = n1.batch_size
 
         if (state != "reset"):
