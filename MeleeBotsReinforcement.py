@@ -174,11 +174,11 @@ while True:
             current_frame = 0
         if (state == "fight" and current_frame % frame_frequency == 0):
             if (p1.percent > p_percent1):
-                rewards2[-1] = p1.percent-p_percent1
-                rewards1[-1] = -(p1.percent-p_percent1)
+                n2.add_reward(p1.percent-p_percent1)
+                n1.add_reward(-(p1.percent-p_percent1))
             if (p2.percent > p_percent2):
-                rewards1[-1] = p2.percent-p_percent2
-                rewards2[-1] = -(p2.percent-p_percent2)
+                n1.add_reward(p2.percent-p_percent2)
+                n2.add_reward(-(p2.percent-p_percent2))
 
             #If there percent goes down it means they die
             if (p1.action == enums.Action.ON_HALO_DESCENT):

@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch
 from collections import OrderedDict
 import random as r
+import numpy as np
 
 class NeuralNet(nn.Module):
 
@@ -37,9 +38,9 @@ class NeuralNet(nn.Module):
 
         self.model = nn.Sequential(self.layers)
 
-    def add_reward(reward):
-        if (len(rewards) == 0): return None
-        rewards[-1] = reward
+    def add_reward(self, reward):
+        if (len(self.rewards) == 0): return None
+        self.rewards[-1] = reward
 
     def forward_pass(self, x):
         output = self.model(x)
@@ -71,7 +72,7 @@ class NeuralNet(nn.Module):
         criterion = torch.nn.MSELoss(reduction='sum')
         optimizer = torch.optim.SGD(self.model.parameters(), lr=0.01, momentum=0.9)
         for _ in range(self.sample_size):
-            r_num = r.randint(0,self.batch_size)
+            r_num = r.randint(0,self.batch_size-1)
             y_pred = self.model(self.inputs[r_num])
 
             #Just change the one that you know the reward for
